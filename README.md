@@ -1,4 +1,4 @@
 # Jet-Multiplicity
-- Dijet/Multiplicity: Generates the mean multiplicity and probability distributions.
-- Dijet/Pythia: Simulates and analyzes the jet multiplicity distribution.
-- Dijet/Sigma: Calculates the differential cross section.
+- Multiplicity: Generates the mean multiplicity and probability distributions.
+- Pythia: Simulates and analyzes the jet multiplicity distribution.
+- Sigma: Calculates the differential cross section.
