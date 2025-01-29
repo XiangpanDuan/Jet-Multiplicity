@@ -67,10 +67,17 @@ double QCD::LambdaQCD(const unsigned int nloop){
   // double alphaS_mZ2=0.118;
   // double b0=_beta0/(4.*M_PI);
   // _lambdaQCD=_Z0->Mass()/std::pow(std::exp(1./(b0*alphaS_mZ2)),0.5);
-  if(nloop==1){_lambdaQCD=0.245748;}  //_lambdaQCD=0.245748 for _nf=3
-
+  if(nloop==1){
+    if(_nf==3){_lambdaQCD=0.2457484;}
+    if(_nf==4){_lambdaQCD=0.1530858;}
+    if(_nf==5){_lambdaQCD=0.0878275;}
+  }
   //NLO with 2-loop β-function coefficient
-  if(nloop==2){_lambdaQCD=0.737644;}  //_lambdaQCD=0.737644 for _nf=3
+  if(nloop==2){
+    if(_nf==3){_lambdaQCD=0.7376440;}
+    if(_nf==4){_lambdaQCD=0.4362115;}
+    if(_nf==5){_lambdaQCD=0.2262347;}
+  }
 
   return _lambdaQCD;
 }
