@@ -18,7 +18,7 @@ class DiJetLO{
  private:
 
   Particle *_parton;
-  unsigned int _nf;                       //flavors of quarks, 3 by default
+  int    _nf;                             //flavors of quarks, 3 by default
   double _preXsection;                    //prefactor for calculating cross secton
   double _Ecm;                            //_Ecm=sqrt{_s} in CoM frame
   double _s;                              //collisional energy square
@@ -60,8 +60,8 @@ class DiJetLO{
   inline void setpT(const double pT) {_pT=pT;}
   inline void setpTScale(const double pTscale) {_pTscale=pTscale;}
   //QCD
-  void setNf(const unsigned int nf);
-  void setLambdaQCD(const unsigned int nloop);
+  void setNf(const int nf);
+  void setLambdaQCD(const int nloop);
 
   //Kinematic calculations
   void MomentumFractions(const double y3c, const double y4d);

@@ -1,4 +1,4 @@
-#include "DiJetLO.h"
+#include "InclusiveJetLO.h"
 
 
 DiJetLO::DiJetLO(){
@@ -36,13 +36,13 @@ DiJetLO::~DiJetLO(){
 //####################################################################################################
 //QCD
 //Quark flavor
-void DiJetLO::setNf(const unsigned int nf){
+void DiJetLO::setNf(const int nf){
   _nf=nf;
   _qcd->setNf(nf);
 }
 
 //LambdaQCD for loop
-void DiJetLO::setLambdaQCD(const unsigned int nloop){
+void DiJetLO::setLambdaQCD(const int nloop){
   _lambdaQCD=_qcd->LambdaQCD(nloop);  //nloop=1 for LO
   // std::cout << "lambdaQCD=" << _lambdaQCD << std::endl;
 }
@@ -109,7 +109,7 @@ void DiJetLO::getFourMomenta(){
 //PDF: parton distribution function
 void DiJetLO::setPDF1(){
   if(KinematicsQcut()){
-    for(unsigned int i=1; i<=_nf; i++){
+    for(int i=1; i<=_nf; i++){
       _pdf1aplus[i] =_qcd->pdf( i,_x1,_pT*_pTscale);
       _pdf1aminus[i]=_qcd->pdf(-i,_x1,_pT*_pTscale);
     }
@@ -118,7 +118,7 @@ void DiJetLO::setPDF1(){
 }
 void DiJetLO::setPDF2(){
   if(KinematicsQcut()){
-    for(unsigned int i=1; i<=_nf; i++){
+    for(int i=1; i<=_nf; i++){
       _pdf2bplus[i] =_qcd->pdf( i,_x2,_pT*_pTscale);
       _pdf2bminus[i]=_qcd->pdf(-i,_x2,_pT*_pTscale);
     }
@@ -144,13 +144,13 @@ double DiJetLO::getPDF2(const int i){
 //JFF: Jet fragmentation function
 void DiJetLO::setJetFF3(){
   _Dz3c[21]=1.0;
-  for(unsigned int i=1; i<=_nf; i++){
+  for(int i=1; i<=_nf; i++){
     _Dz3c[i]=1.0;
   }
 }
 void DiJetLO::setJetFF4(){
   _Dz4d[21]=1.0;
-  for(unsigned int i=1; i<=_nf; i++){
+  for(int i=1; i<=_nf; i++){
     _Dz4d[i]=1.0;
   }
 }
@@ -187,7 +187,7 @@ inline double DiJetLO::M2qqp2qqp(const double &s, const double &t, const double 
 
 inline double DiJetLO::M2qq2qq(const double &s, const double &t, const double &u){
   //qq->qq
-  return (4./9.)*((s*s+u*u)/(t*t)+(s*s+t*t)/(u*u))-(8./27.)*(s*s/(u*t));
+  return (4./9.)*((s*s+u*u)/(t*t)+(s*s+t*t)/(u*u))-(8./27.)*((s*s)/(u*t));
 }
 
 inline double DiJetLO::M2qqb2qpqpb(const double &s, const double &t, const double &u){
@@ -197,7 +197,7 @@ inline double DiJetLO::M2qqb2qpqpb(const double &s, const double &t, const doubl
 
 inline double DiJetLO::M2qqb2qqb(const double &s, const double &t, const double &u){
   //qqbar->qqbar
-  return (4./9.)*((s*s+u*u)/(t*t)+(t*t+u*u)/(s*s))-(8./27.)*(u*u/(s*t));
+  return (4./9.)*((s*s+u*u)/(t*t)+(t*t+u*u)/(s*s))-(8./27.)*((u*u)/(s*t));
 }
 
 inline double DiJetLO::M2qqb2gg(const double &s, const double &t, const double &u){
@@ -222,199 +222,181 @@ inline double DiJetLO::M2gg2gg(const double &s, const double &t, const double &u
 
 
 //####################################################################################################
-//Differential cross sectoin of Dijet at LO (2->2)
-//dsigma=2*pi*pT*alphas^2/(x1*x2*s^2)*M2*pdf1(x2)*pdf2(x2) in pb/GeV
-//qq'->qq' and qq'->q'q
+//Differential cross sectoin of inclusive jets at LO (2->2)
+//dsigma=2*π*pT*⍺s^2/(x1*x2*s^2)*M2*pdf1(x1)*pdf2(x2) in pb/GeV
+//qq'->qq' and qq'->q'q (t,u channel)
 double DiJetLO::SigmaLOqqp2qqp(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsqqp =0.0;
-    double dsqqp_=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      for(unsigned int j=1; j<=_nf; j++){
-        if(i==j) continue;
-        //qq'->qq'
-        dsqqp +=getPDF1( i)*getPDF2( j)*getJetFF3( i)*getJetFF4( j);
-        dsqqp +=getPDF1( i)*getPDF2(-j)*getJetFF3( i)*getJetFF4(-j);
-        dsqqp +=getPDF1(-i)*getPDF2( j)*getJetFF3(-i)*getJetFF4( j);
-        dsqqp +=getPDF1(-i)*getPDF2(-j)*getJetFF3(-i)*getJetFF4(-j);
-        //qq'->q'q, exchange parton (t->u,u->t)
-        dsqqp_+=getPDF1( i)*getPDF2( j)*getJetFF3( j)*getJetFF4( i);
-        dsqqp_+=getPDF1( i)*getPDF2(-j)*getJetFF3(-j)*getJetFF4( i);
-        dsqqp_+=getPDF1(-i)*getPDF2( j)*getJetFF3( j)*getJetFF4(-i);
-        dsqqp_+=getPDF1(-i)*getPDF2(-j)*getJetFF3(-j)*getJetFF4(-i);
+    double dsi3j4=0.0;
+    double dsj4i3=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      for(int j=(-_nf); j<=_nf; j++){
+        if(j==0) continue;
+        if(std::abs(i)==std::abs(j)) continue;
+        //qq'->q3q'4
+        dsi3j4+=getPDF1(i)*getPDF2(j)*getJetFF3(i)*getJetFF4(j);
+        //qq'->q'4q3, crossed final partons (t->u,u->t)
+        dsj4i3+=getPDF1(i)*getPDF2(j)*getJetFF3(j)*getJetFF4(i);
       }
     }
-    res=(dsqqp*M2qqp2qqp(_shat,_that,_uhat)+dsqqp_*M2qqp2qqp(_shat,_uhat,_that))*getXsection();
-    // std::cout << "res1=" << res << std::endl;
+    res=(dsi3j4*M2qqp2qqp(_shat,_that,_uhat)+dsj4i3*M2qqp2qqp(_shat,_uhat,_that))*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//qq->qq
+//qq->qq (t,u channel)
 double DiJetLO::SigmaLOqq2qq(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsqq=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //qq->qq
-      dsqq+=getPDF1( i)*getPDF2( i)*getJetFF3( i)*getJetFF4( i);
-      dsqq+=getPDF1(-i)*getPDF2(-i)*getJetFF3(-i)*getJetFF4(-i);
+    double dsi3i4=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //qq->q3q4
+      dsi3i4+=getPDF1(i)*getPDF2(i)*getJetFF3(i)*getJetFF4(i)*(1./2.);  //1./2. from identical particles in the final state
     }
-    res=dsqq*M2qq2qq(_shat,_that,_uhat)*getXsection();
-    // std::cout << "res2=" << res << std::endl;
+    dsi3i4*=2.0;  //2. for q3 and q4 inclusive jets in the final state
+    res=dsi3i4*M2qq2qq(_shat,_that,_uhat)*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//qqbar->q'q'bar
+//qqbar->q'q'bar (s channel)
 double DiJetLO::SigmaLOqqb2qpqpb(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsqpqpb=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      for(unsigned int j=1; j<=_nf; j++){
-        if(i==j) continue;
-        //qqbar->q'q'bar
-        dsqpqpb+=getPDF1( i)*getPDF2(-i)*getJetFF3( j)*getJetFF4(-j);
-        dsqpqpb+=getPDF1( i)*getPDF2(-i)*getJetFF3(-j)*getJetFF4( j);
-        dsqpqpb+=getPDF1(-i)*getPDF2( i)*getJetFF3( j)*getJetFF4(-j);
-        dsqpqpb+=getPDF1(-i)*getPDF2( i)*getJetFF3(-j)*getJetFF4( j);
+    double dsj3j4=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      for(int j=(-_nf); j<=_nf; j++){
+        if(j==0) continue;
+        if(std::abs(i)==std::abs(j)) continue;
+        //qqbar->q'3q'bar4
+        dsj3j4+=getPDF1(i)*getPDF2(-i)*getJetFF3(j)*getJetFF4(-j);
       }
     }
-    res=dsqpqpb*M2qqb2qpqpb(_shat,_that,_uhat)*getXsection();
-    // std::cout << "res3=" << res << std::endl;
+    res=dsj3j4*M2qqb2qpqpb(_shat,_that,_uhat)*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//qqbar->qqbar and qqbar->qbarq
+//qqbar->qqbar and qqbar->qbarq (s,t,u channel)
 double DiJetLO::SigmaLOqqb2qqb(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsqqb =0.0;
-    double dsqqb_=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //qqbar->qqbar
-      dsqqb +=getPDF1( i)*getPDF2(-i)*getJetFF3( i)*getJetFF4(-i);
-      dsqqb +=getPDF1(-i)*getPDF2( i)*getJetFF3(-i)*getJetFF4( i);
-      //qqbar->qbarq, exchange parton (t->u,u->t)
-      dsqqb_+=getPDF1( i)*getPDF2(-i)*getJetFF3(-i)*getJetFF4( i);
-      dsqqb_+=getPDF1(-i)*getPDF2( i)*getJetFF3( i)*getJetFF4(-i);
+    double dsi3i4=0.0;
+    double dsi4i3=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //qqbar->q3qbar4
+      dsi3i4+=getPDF1(i)*getPDF2(-i)*getJetFF3( i)*getJetFF4(-i);
+      //qqbar->qbar3q4, crossed final partons (t->u,u->t)
+      dsi4i3+=getPDF1(i)*getPDF2(-i)*getJetFF3(-i)*getJetFF4( i);
     }
-    res=(dsqqb*M2qqb2qqb(_shat,_that,_uhat)+dsqqb_*M2qqb2qqb(_shat,_uhat,_that))*getXsection();
-    // std::cout << "res4=" << res << std::endl;
+    res=(dsi3i4*M2qqb2qqb(_shat,_that,_uhat)+dsi4i3*M2qqb2qqb(_shat,_uhat,_that))*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//qqbar->gg
+//qqbar->gg (s,t,u channel)
 double DiJetLO::SigmaLOqqb2gg(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsqqbg=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //qqbar->gg
-      dsqqbg+=getPDF1( i)*getPDF2(-i)*getJetFF3(21)*getJetFF4(21);
-      dsqqbg+=getPDF1(-i)*getPDF2( i)*getJetFF3(21)*getJetFF4(21);
+    double dsg3g4=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //qqbar->g3g4
+      dsg3g4+=getPDF1(i)*getPDF2(-i)*getJetFF3(21)*getJetFF4(21)*(1./2.);  //1./2. from identical particles in the final state
     }
-    res=dsqqbg*M2qqb2gg(_shat,_that,_uhat)*getXsection();
-    // std::cout << "res5=" << res << std::endl;
+    dsg3g4*=2.0;  //2.0 for g3 and g4 inclusive jets in the final state
+    res=dsg3g4*M2qqb2gg(_shat,_that,_uhat)*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//gg->qqbar
+//gg->qqbar (s,t,u channel)
 double DiJetLO::SigmaLOgg2qqb(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsggqqb=0.0;
-    for(unsigned int j=1; j<=_nf; j++){
+    double dsj3j4=0.0;
+    for(int j=(-_nf); j<=_nf; j++){
+      if(j==0) continue;
       //gg->qqbar
-      dsggqqb+=getPDF1(21)*getPDF2(21)*getJetFF3( j)*getJetFF4(-j);
-      dsggqqb+=getPDF1(21)*getPDF2(21)*getJetFF3(-j)*getJetFF4( j);
+      dsj3j4+=getPDF1(21)*getPDF2(21)*getJetFF3(j)*getJetFF4(-j);
     }
-    res=dsggqqb*M2gg2qqb(_shat,_that,_uhat)*getXsection();
-    // std::cout << "res6=" << res << std::endl;
+    res=dsj3j4*M2gg2qqb(_shat,_that,_uhat)*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//gq(qg)->gq(qg) and gq(qg)->qg(gq)
+//gq->gq and gq->qg (s,t,u channel)
 double DiJetLO::SigmaLOgq2gq(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsgq =0.0;
-    double dsgq_=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //gq(qg)->gq(qg)
-      dsgq +=getPDF1(21)*getPDF2( i)*getJetFF3(21)*getJetFF4( i);
-      dsgq +=getPDF1(21)*getPDF2(-i)*getJetFF3(21)*getJetFF4(-i);
-      dsgq +=getPDF1( i)*getPDF2(21)*getJetFF3( i)*getJetFF4(21);
-      dsgq +=getPDF1(-i)*getPDF2(21)*getJetFF3(-i)*getJetFF4(21);
-      //gq(qg)->qg(gq), exchange parton (t->u,u->t)
-      dsgq_+=getPDF1(21)*getPDF2( i)*getJetFF3( i)*getJetFF4(21);
-      dsgq_+=getPDF1(21)*getPDF2(-i)*getJetFF3(-i)*getJetFF4(21);
-      dsgq_+=getPDF1( i)*getPDF2(21)*getJetFF3(21)*getJetFF4( i);
-      dsgq_+=getPDF1(-i)*getPDF2(21)*getJetFF3(21)*getJetFF4(-i);
+    double ds =0.0;
+    double ds_=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //gq->g3q4 and qg->q3g4
+      ds +=getPDF1(21)*getPDF2( i)*getJetFF3(21)*getJetFF4( i);
+      ds +=getPDF1( i)*getPDF2(21)*getJetFF3( i)*getJetFF4(21);
+      //qg->g3q4 and gq->q3g4, crossed final partons (t->u,u->t)
+      ds_+=getPDF1( i)*getPDF2(21)*getJetFF3(21)*getJetFF4( i);
+      ds_+=getPDF1(21)*getPDF2( i)*getJetFF3( i)*getJetFF4(21);
     }
-    res=(dsgq*M2gq2gq(_shat,_that,_uhat)+dsgq_*M2gq2gq(_shat,_uhat,_that))*getXsection();
-    // std::cout << "res7=" << res << std::endl;
+    res=(ds*M2gq2gq(_shat,_that,_uhat)+ds_*M2gq2gq(_shat,_uhat,_that))*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//Quark jet (3): observed jet
-//qg->qg and gq->qg
-double DiJetLO::SigmaLOgq2gq_Q(){
-  double res=0.0;
-  if(KinematicsQcut()){
-    double dsgq1 =0.0;
-    double dsgq1_=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //qg->qg
-      dsgq1 +=getPDF1( i)*getPDF2(21)*getJetFF3( i)*getJetFF4(21);
-      dsgq1 +=getPDF1(-i)*getPDF2(21)*getJetFF3(-i)*getJetFF4(21);
-      //gq->qg, exchange parton (t->u,u->t)
-      dsgq1_+=getPDF1(21)*getPDF2( i)*getJetFF3( i)*getJetFF4(21);
-      dsgq1_+=getPDF1(21)*getPDF2(-i)*getJetFF3(-i)*getJetFF4(21);
-    }
-    res=(dsgq1*M2gq2gq(_shat,_that,_uhat)+dsgq1_*M2gq2gq(_shat,_uhat,_that))*getXsection();
-    // std::cout << "Quark: res7=" << res << std::endl;
-  }
-  return res*_unitGeV2pb;  //return with unit pb
-}
 //Gluon jet (3): observed jet
-//gq->gq and qg->gq
+//gq->gq (s,t,u channel)
 double DiJetLO::SigmaLOgq2gq_G(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsgq2 =0.0;
-    double dsgq2_=0.0;
-    for(unsigned int i=1; i<=_nf; i++){
-      //gq->gq
-      dsgq2 +=getPDF1(21)*getPDF2( i)*getJetFF3(21)*getJetFF4( i);
-      dsgq2 +=getPDF1(21)*getPDF2(-i)*getJetFF3(21)*getJetFF4(-i);
-      //qg->gq, exchange parton (t->u,u->t)
-      dsgq2_+=getPDF1( i)*getPDF2(21)*getJetFF3(21)*getJetFF4( i);
-      dsgq2_+=getPDF1(-i)*getPDF2(21)*getJetFF3(21)*getJetFF4(-i);
+    double dsg =0.0;
+    double dsg_=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //gq->g3q4
+      dsg +=getPDF1(21)*getPDF2( i)*getJetFF3(21)*getJetFF4( i);
+      //qg->g3q4, crossed final partons (t->u,u->t)
+      dsg_+=getPDF1( i)*getPDF2(21)*getJetFF3(21)*getJetFF4( i);
     }
-    res=(dsgq2*M2gq2gq(_shat,_that,_uhat)+dsgq2_*M2gq2gq(_shat,_uhat,_that))*getXsection();
-    // std::cout << "Gluon: res7=" << res << std::endl;
+    res=(dsg*M2gq2gq(_shat,_that,_uhat)+dsg_*M2gq2gq(_shat,_uhat,_that))*getXsection();
+  }
+  return res*_unitGeV2pb;  //return with unit pb
+}
+//Quark jet (3): observed jet
+//gq->qg (s,t,u channel)
+double DiJetLO::SigmaLOgq2gq_Q(){
+  double res=0.0;
+  if(KinematicsQcut()){
+    double dsq =0.0;
+    double dsq_=0.0;
+    for(int i=(-_nf); i<=_nf; i++){
+      if(i==0) continue;
+      //qg->q3g4
+      dsq +=getPDF1( i)*getPDF2(21)*getJetFF3( i)*getJetFF4(21);
+      //gq->q3g4, crossed final partons (t->u,u->t)
+      dsq_+=getPDF1(21)*getPDF2( i)*getJetFF3( i)*getJetFF4(21);
+    }
+    res=(dsq*M2gq2gq(_shat,_that,_uhat)+dsq_*M2gq2gq(_shat,_uhat,_that))*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
 
-//gg->gg
+//gg->gg (s,t,u channel)
 double DiJetLO::SigmaLOgg2gg(){
   double res=0.0;
   if(KinematicsQcut()){
-    double dsgggg=0.0;
-    //gg->gg
-    dsgggg+=getPDF1(21)*getPDF2(21)*getJetFF3(21)*getJetFF4(21);
-    
-    res=dsgggg*M2gg2gg(_shat,_that,_uhat)*getXsection();
-    // std::cout << "res8=" << res << std::endl;
+    double dsg3g4=0.0;
+    //gg->g3g4
+    dsg3g4+=getPDF1(21)*getPDF2(21)*getJetFF3(21)*getJetFF4(21)*(1./2.);  //1./2. from identical particles in the final state
+    dsg3g4*=2.0;  //2.0 for g3 and g4 inclusive jets in the final state
+
+    res=dsg3g4*M2gg2gg(_shat,_that,_uhat)*getXsection();
   }
   return res*_unitGeV2pb;  //return with unit pb
 }
@@ -441,6 +423,7 @@ double DiJetLO::SigmaLO(){
 double DiJetLO::SigmaLOQuark(){
   double res=0.0;
   if(KinematicsQcut()){
+    // res=SigmaLOqqp2qqp();
     res=SigmaLOqqp2qqp()+SigmaLOqq2qq()+SigmaLOqqb2qpqpb()+SigmaLOqqb2qqb()+SigmaLOgq2gq_Q()+SigmaLOgg2qqb();
   }
   return res;
@@ -449,6 +432,7 @@ double DiJetLO::SigmaLOQuark(){
 double DiJetLO::SigmaLOGluon(){
   double res=0.0;
   if(KinematicsQcut()){
+    // res=SigmaLOqqb2gg();
     res=SigmaLOqqb2gg()+SigmaLOgq2gq_G()+SigmaLOgg2gg();
   }
   return res;

@@ -6,7 +6,7 @@ QCD::QCD(){
   setNf(3);
 }
 
-QCD::QCD(const unsigned int nf){
+QCD::QCD(const int nf){
   setQCDInitialCondition();
   setNf(nf);
 }
@@ -22,12 +22,13 @@ void QCD::setQCDInitialCondition(){
 
   _Z0 = new Particle("Z0");
 
-  const int imem=0;  //loading file member
-  _pdf = LHAPDF::mkPDF("CT18NLO",imem);  //download the pdfset from https://lhapdf.hepforge.org/pdfsets.html and put it into the folder which can be found out by lhapdf-config --datadir.
-  // _pdf = LHAPDF::mkPDF("CT14nlo",imem);
+  //Download the pdfset from https://lhapdf.hepforge.org/pdfsets.html and put it into the folder which can be found out by lhapdf-config --datadir
+  const int imem=0;  //load file member
+  _pdf = LHAPDF::mkPDF("CT18NLO",imem);  //or CT14nlo
+  // _pdf = LHAPDF::mkPDF("NNPDF23_lo_as_0130_qed",imem);  //same PDF with the default MadGraph model
 }
 
-void QCD::setNf(const unsigned int nf){
+void QCD::setNf(const int nf){
   _nf=nf;
   setQCDParameters();
   // std::cout << "_nf=" << _nf << std::endl;
@@ -62,7 +63,7 @@ void QCD::setQCDParameters(){
 //####################################################################################################
 //In 153-154 pages of [S. Navas et al. (Particle Data Group), Phys. Rev. D 110, 030001 (2024)]
 //Λ_QCD
-double QCD::LambdaQCD(const unsigned int nloop){
+double QCD::LambdaQCD(const int nloop){
   //LO with 1-loop β-function coefficient
   // double alphaS_mZ2=0.118;
   // double b0=_beta0/(4.*M_PI);
@@ -106,7 +107,7 @@ double QCD::Pgq(const double z){
 double QCD::Pgq(const double z, const double x, const double Q){
   double res=0.0;
   if(z>x && z<1.){
-    for(unsigned int i=1; i<=_nf; i++){
+    for(int i=1; i<=_nf; i++){
       res+=pdf(i,x/z,Q);
     }
     res*=Pgq(z)/z;
@@ -117,7 +118,7 @@ double QCD::Pgq(const double z, const double x, const double Q){
 double QCD::Pgqb(const double z, const double x, const double Q){
   double res=0.0;
   if(z>x && z<1.){
-    for(unsigned int i=1; i<=_nf; i++){
+    for(int i=1; i<=_nf; i++){
       res+=pdf(-i,x/z,Q);
     }
     res*=Pgq(z)/z;

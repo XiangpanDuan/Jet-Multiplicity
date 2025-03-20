@@ -15,7 +15,7 @@ class QCD{
 
   LHAPDF::PDF *_pdf;               //download LHAPDF from https://lhapdf.hepforge.org/install.html
   Particle *_Z0;
-  unsigned int _nf;                //flavors of quarks, 3 by default
+  int    _nf;                      //flavors of quarks, 3 by default
   double _lambdaQCD;
   double _TF;
   double _Nc,_CA,_CF;              //number of colors
@@ -27,14 +27,14 @@ class QCD{
  public:
 
   QCD();
-  QCD(const unsigned int nf);
+  QCD(const int nf);
   ~QCD();
   void setQCDInitialCondition();
-  void setNf(const unsigned int nf);
+  void setNf(const int nf);
   void setQCDParameters();
 
   //Color factor
-  inline unsigned int Nf() const {return _nf;}
+  inline int    Nf() const {return _nf;}
   inline double TF() const {return _TF;}
   inline double Nc() const {return _Nc;}
   inline double CA() const {return _CA;}
@@ -43,7 +43,7 @@ class QCD{
   //PDF, alphas, and Λ_QCD
   inline double pdf(const int f, const double x, const double Q) const {return _pdf->xfxQ(f,x,Q)/x;}  //PDF as a function of flavor with momentum fraction x and factorization scale Q
   inline double alphas(const double Q) const {return _pdf->alphasQ(Q);}                               //strong coupling constant alphas as a function of Q
-  double LambdaQCD(const unsigned int nloop);
+  double LambdaQCD(const int nloop);
 
   //Splitting function
   double Pqg(const double z);

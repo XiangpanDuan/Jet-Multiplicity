@@ -21,14 +21,14 @@ Particle.o: Particle.cpp Particle.h
 QCD.o: QCD.cpp QCD.h
 	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c QCD.cpp
 
-DiJetLO.o: DiJetLO.cpp DiJetLO.h
-	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c DiJetLO.cpp
+InclusiveJetLO.o: InclusiveJetLO.cpp InclusiveJetLO.h
+	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c InclusiveJetLO.cpp
 
 #Calculate Leading-Order cross section
-CalDiJetLO.o: CalDiJetLO.cpp
-	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c CalDiJetLO.cpp
+CalculateLO.o: CalculateLO.cpp
+	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c CalculateLO.cpp
 
-pp.exe: CalDiJetLO.o DiJetLO.o QCD.o Particle.o
+pp.exe: CalculateLO.o InclusiveJetLO.o QCD.o Particle.o
 	$(CXX) $(CXXFLAGS) $^ $(LPDF) $(LGSL) -o $@
 
 
