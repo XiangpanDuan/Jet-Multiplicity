@@ -9,6 +9,7 @@
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/ClusterSequence.hh"
 #include "fastjet/Selector.hh"
+#include "fastjet/contrib/EnergyCorrelator.hh"
 
 
 //####################################################################################################
@@ -18,8 +19,8 @@ double jet_ptmin=100.0;                //pt lowlimit for inclusive jets {100.,30
 double particle_ptmin=0.5;             //pt lowlimit for input particles
 double constituent_ptmin=0.5;          //pt lowlimit for constituent particles
 double jet_etamax=2.1;                 //eta upperlimit for inclusive jets
-double particle_etamax=2.3;            //eta upperlimit for input particles
-double Rsize=0.2;                      //jet cone size
+double particle_etamax=2.5;            //eta upperlimit for input particles
+double Rsize=0.4;                      //jet cone size
 unsigned int jet_nhardest=2;           //n hardest jets
 
 //Histogram
@@ -29,11 +30,16 @@ TH1D *pTDis    = new TH1D("pTDis",   "pTDis",   300,0.,3000.);
 TH1D *EtaDis   = new TH1D("EtaDis",  "EtaDis",  100,-5.,5.);
 TH1D *PhiDis   = new TH1D("PhiDis",  "PhiDis",  36,-M_PI,M_PI);
 const int ntype=3;
+const int nbeta=6;
+const int nc1cut=20;
 const int npTbin=16;
-TH1D *Multi[ntype];
-TH1D *MultipT[ntype][npTbin];
-TH1D *MultiAll[ntype];
-TH1D *MultiAllpT[ntype][npTbin];
+TH1D *C1betapT[ntype][nbeta][npTbin];
+TH1D *C1betaAllpT[ntype][nbeta][npTbin];
+TH1D *MultiC1cut[ntype][nc1cut];
+TH1D *MultiAllC1cut[ntype][nc1cut];
+TH1D *MultiC1cutpT[ntype][nc1cut][npTbin];
+TH1D *MultiAllC1cutpT[ntype][nc1cut][npTbin];
+double betavalue[nbeta]={0.1,0.2,0.5,1.,2.,3.};
 double pTrange[npTbin+1]={0.,100.,200.,300.,400.,500.,600.,700.,800.,900.,1000.,1200.,1400.,1600.,2000.,2500.,3000.};
 
 
@@ -50,17 +56,32 @@ int main(int argc, char **argv)
 {
     //------------------------------------------------------------
     //Histogram set
+    int    ECFnum=100;
+    double ECFmin=0.0, ECFmax=1.0;
+    double ECFbin=(ECFmax-ECFmin)/ECFnum;
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nbeta; j++){
+            double beta=betavalue[j];
+            for(int k=0; k<npTbin; k++){
+                C1betapT[i][j][k]    = new TH1D(Form("C1beta_%d_%.1f_pT%d",i,beta,k),   Form("C1beta_%d_%.1f_pT%d",i,beta,k),   ECFnum,ECFmin,ECFmax);
+                C1betaAllpT[i][j][k] = new TH1D(Form("C1betaAll_%d_%.1f_pT%d",i,beta,k),Form("C1betaAll_%d_%.1f_pT%d",i,beta,k),ECFnum,ECFmin,ECFmax);
+            }
+        }
+    }
     int    multinum=200;
     double multimin=-0.5, multimax=199.5;
     double multibin=(multimax-multimin)/multinum;
     for(int i=0; i<ntype; i++){
-        Multi[i] = new TH1D(Form("Multi%d",i),Form("Multi%d",i),3000,0.,3000.);
-        MultiAll[i] = new TH1D(Form("MultiAll%d",i),Form("MultiAll%d",i),3000,0.,3000.);
-        Multi[i]->SetBins(npTbin,pTrange);
-        MultiAll[i]->SetBins(npTbin,pTrange);
-        for(int j=0; j<npTbin; j++){
-            MultipT[i][j] = new TH1D(Form("Multi%d_pT%d",i,j),Form("Multi%d_pT%d",i,j),multinum,multimin,multimax);
-            MultiAllpT[i][j] = new TH1D(Form("MultiAll%d_pT%d",i,j),Form("MultiAll%d_pT%d",i,j),multinum,multimin,multimax);
+        for(int j=0; j<nc1cut; j++){
+            double c1cut=(j+10)/100.;
+            MultiC1cut[i][j]    = new TH1D(Form("Multi_%d_C1cut%.2f",i,c1cut),   Form("Multi_%d_C1cut%.2f",i,c1cut),   3000,0.,3000.);
+            MultiAllC1cut[i][j] = new TH1D(Form("MultiAll_%d_C1cut%.2f",i,c1cut),Form("MultiAll_%d_C1cut%.2f",i,c1cut),3000,0.,3000.);
+            MultiC1cut[i][j]->SetBins(npTbin,pTrange);
+            MultiAllC1cut[i][j]->SetBins(npTbin,pTrange);
+            for(int k=0; k<npTbin; k++){
+                MultiC1cutpT[i][j][k]    = new TH1D(Form("Multi_%d_C1cut%.2f_pT%d",i,c1cut,k),   Form("Multi_%d_C1cut%.2f_pT%d",i,c1cut,k),   multinum,multimin,multimax);
+                MultiAllC1cutpT[i][j][k] = new TH1D(Form("MultiAll_%d_C1cut%.2f_pT%d",i,c1cut,k),Form("MultiAll_%d_C1cut%.2f_pT%d",i,c1cut,k),multinum,multimin,multimax);
+            }
         }
     }
 
@@ -81,9 +102,9 @@ int main(int argc, char **argv)
     else if(jet_ptmin==1000.) ptdiff=20.;
     else if(jet_ptmin==1600.) ptdiff=20.;
     std::stringstream ssin,ssout;
-    // if(mode==0) ssout << "../Output/ATLAS_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_Tune21_MPIoff";
-    if(mode==0) ssout << "../Output/ATLAS_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_Tune21";
-    if(mode==1) ssout << "../Output/ATLAS_Multiplicity_DiJet_Hadron_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_Tune21";
+    // if(mode==0) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV" << "_Tune21_MPIoff";
+    if(mode==0) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_C1cut_Tune21";
+    if(mode==1) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Hadron_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_C1cut_Tune21";
     std::string OutputString=ssout.str();
     // if(mode==0) ssin  << "../../Simulation/Output/ATLAS_DiJet_Parton_13000GeV_" << jet_ptmin-ptdiff << "GeV_Tune21_MPIoff.dat";
     if(mode==0) ssin  << "../../Simulation/Output/ATLAS_DiJet_Parton_13000GeV_" << jet_ptmin-ptdiff << "GeV_Tune21.dat";
@@ -100,7 +121,8 @@ int main(int argc, char **argv)
 
     //------------------------------------------------------------
     //Event loop
-    int nEvents=10000000;  //number of events
+    int nEvents=1000;
+    // int nEvents=10000000;  //number of events
     std::cout << "Total events: " << nEvents << std::endl;
     for(int iEvent=1; iEvent<=nEvents; iEvent++){
         //Write current working event
@@ -179,11 +201,11 @@ int main(int argc, char **argv)
             int islable[2]={0,0};
             for(unsigned int iJet=0; iJet<2; iJet++){
                 for(int i=2; i<4; i++){
-                    if(std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())<(1./3.*M_PI) || std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())>( 5./3.*M_PI)) {islable[iJet]=i;}
-                    // if(std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())<(1./6.*M_PI) || std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())>(11./6.*M_PI)) {islable[iJet]=i;}
+                    if(std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())<(1./3.*M_PI) || std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())>(5./3.*M_PI)) {islable[iJet]=i;}
                 }
             }
             // if(islable[0]==0 || islable[1]==0) continue;
+            // std::cout << Hard_id[2] << " " << Hard_id[3] << " " << islable[0] << " " << islable[1] << " " << Hard_id[islable[0]] << " " << Hard_id[islable[1]] << std::endl;
 
             //Leading two jets measurement
             for(unsigned int iJet=0; iJet<jet_nhardest; iJet++){
@@ -195,17 +217,67 @@ int main(int argc, char **argv)
 
                 //pT range
                 int ptbin=0;  //invalid the minimum pt bin
-                for(int j=0; j<npTbin; j++){
-                    if(inclusive_jets[iJet].pt()>pTrange[j] && inclusive_jets[iJet].pt()<pTrange[j+1]) {ptbin=j; break;}
+                for(int k=0; k<npTbin; k++){
+                    if(inclusive_jets[iJet].pt()>pTrange[k] && inclusive_jets[iJet].pt()<pTrange[k+1]) {ptbin=k; break;}
                 }
 
                 //Constituent particle
                 std::vector<fastjet::PseudoJet> constituents=inclusive_jets[iJet].constituents();
                 if(constituents.size()==0) continue;
 
+                //Energy correlation function
+                double c1beta[nbeta];
+                double c1betaall[nbeta];
+                for(int j=0; j<nbeta; j++){
+                    double beta=betavalue[j];
+                    double sumECF[3]={1.,0.,0.};
+                    for(unsigned int iCon=0; iCon<constituents.size(); iCon++){
+                        if(GetCharge(constituents[iCon].user_index())==0.0) continue;
+                        sumECF[1]+=constituents[iCon].pt();
+                        for(unsigned int jCon=(iCon+1); jCon<constituents.size(); jCon++){
+                            if(GetCharge(constituents[jCon].user_index())==0.0) continue;
+                            double drij=constituents[iCon].delta_R(constituents[jCon]);
+                            sumECF[2]+=constituents[iCon].pt()*constituents[jCon].pt()*std::pow(drij,beta);
+                            // double drap=constituents[iCon].rap()-constituents[jCon].rap();
+                            // double dphi=constituents[iCon].delta_phi_to(constituents[jCon]);
+                            // // double dphi=constituents[iCon].phi_std()-constituents[jCon].phi_std();
+                            // // if(dphi<-M_PI) dphi+=2.*M_PI;
+                            // // if(dphi> M_PI) dphi-=2.*M_PI;
+                            // // std::cout << iCon << " " << jCon << " " << dphi << " " << constituents[iCon].delta_phi_to(constituents[jCon]) << std::endl;
+                            // double drij=std::sqrt(drap*drap+dphi*dphi);
+                            // std::cout << iEvent << " " << drij << " " << constituents[iCon].delta_R(constituents[jCon]) << std::endl;
+                            // sumECF[2]+=constituents[iCon].pt()*constituents[jCon].pt()*std::pow(drij,beta);
+                        }
+                    }
+                    c1beta[j]=0.0;
+                    if(sumECF[1]!=0.0) c1beta[j]=sumECF[2]*sumECF[0]/(sumECF[1]*sumECF[1]);
+                    c1betaall[j]=0.0;
+                    fastjet::contrib::EnergyCorrelatorDoubleRatio C1All(1,beta,fastjet::contrib::EnergyCorrelator::pt_R);
+                    c1betaall[j]=C1All(inclusive_jets[iJet]);
+                    // std::cout << iEvent << " " << iJet << " " << c1beta[j] << " " << c1betaall[j] << std::endl;
+                    //Charged ECF double ratio
+                    if(c1beta[j]!=0.0){
+                        C1betapT[0][j][ptbin]->Fill(c1beta[j],1./ECFbin);  //charged jet
+                        //Keeping the leading and subleading jets consistent in the initial and final state
+                        if(islable[0]!=0 && islable[1]!=0){
+                            if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) C1betapT[1][j][ptbin]->Fill(c1beta[j],1./ECFbin);  //quark jet
+                            if(std::abs(Hard_id[lable])==21) C1betapT[2][j][ptbin]->Fill(c1beta[j],1./ECFbin);                                //gluon jet
+                        }
+                    }
+                    //All ECF double ratio
+                    if(c1betaall[j]!=0.0){
+                        C1betaAllpT[0][j][ptbin]->Fill(c1betaall[j],1./ECFbin);  //all jet
+                        //Keeping the leading and subleading jets consistent in the initial and final state
+                        if(islable[0]!=0 && islable[1]!=0){
+                            if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) C1betaAllpT[1][j][ptbin]->Fill(c1betaall[j],1./ECFbin);  //quark jet
+                            if(std::abs(Hard_id[lable])==21) C1betaAllpT[2][j][ptbin]->Fill(c1betaall[j],1./ECFbin);                                //gluon jet
+                        }
+                    }
+                }
+
                 //Multiplicity
-                int sumall=0;
                 int sumcharge=0;
+                int sumall=0;
                 for(unsigned int iCon=0; iCon<constituents.size(); iCon++){
                     int ischarge=0;
                     int isall=0;
@@ -213,38 +285,44 @@ int main(int argc, char **argv)
                     if(mode==0 && std::abs(constituents[iCon].user_index())>=1 && std::abs(constituents[iCon].user_index())<=6) {ischarge=1; isall=1;}
                     if(mode==0 && std::abs(constituents[iCon].user_index())==21) {ischarge=1; isall=1;}
                     //Charged hadron and all hadron
-                    if(mode==1 && GetCharge(constituents[iCon].user_index())!=0.) {ischarge=1;}
+                    if(mode==1 && GetCharge(constituents[iCon].user_index())!=0.0) {ischarge=1;}
                     if(mode==1) {isall=1;}
                     //Charged particle
                     if(ischarge==1 && constituents[iCon].pt()>constituent_ptmin) {sumcharge+=1;}
                     //All particle
                     if(isall==1 && constituents[iCon].pt()>constituent_ptmin) {sumall+=1;}
                 }
-
                 //Charged multiplicity
                 if(sumcharge!=0){
-                    MultipT[0][ptbin]->Fill(sumcharge,1./multibin);  //charged jet
-                    //Keeping the leading and subleading jets consistent in the initial and final state
-                    if(islable[0]!=0 && islable[1]!=0){
-                        if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultipT[1][ptbin]->Fill(sumcharge,1./multibin);  //quark jet
-                        if(std::abs(Hard_id[lable])==21) MultipT[2][ptbin]->Fill(sumcharge,1./multibin);                                //gluon jet
+                    for(int j=0; j<nc1cut; j++){
+                        double c1cut=(j+10)/100.;
+                        MultiC1cutpT[0][j][ptbin]->Fill(sumcharge,1./multibin);  //charged jet
+                        //Keeping the leading and subleading jets consistent in the initial and final state
+                        if(islable[0]!=0 && islable[1]!=0){
+                            //c1beta[1] means beta=0.2
+                            if(c1beta[1]>0.000 && c1beta[1]<c1cut) MultiC1cutpT[1][j][ptbin]->Fill(sumcharge,1./multibin);  //quark jet
+                            if(c1beta[1]>c1cut && c1beta[1]<0.500) MultiC1cutpT[2][j][ptbin]->Fill(sumcharge,1./multibin);  //gluon jet
+                        }
                     }
                 }
-
                 //All multiplicity
                 if(sumall!=0){
-                    MultiAllpT[0][ptbin]->Fill(sumall,1./multibin);  //all jet
-                    //Keeping the leading and subleading jets consistent in the initial and final state
-                    if(islable[0]!=0 && islable[1]!=0){
-                        if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultiAllpT[1][ptbin]->Fill(sumall,1./multibin);  //quark jet
-                        if(std::abs(Hard_id[lable])==21) MultiAllpT[2][ptbin]->Fill(sumall,1./multibin);                                //gluon jet
+                    for(int j=0; j<nc1cut; j++){
+                        double c1cut=(j+10)/100.;
+                        MultiAllC1cutpT[0][j][ptbin]->Fill(sumall,1./multibin);  //all jet
+                        //Keeping the leading and subleading jets consistent in the initial and final state
+                        if(islable[0]!=0 && islable[1]!=0){
+                            //c1betaall[1] means beta=0.2
+                            if(c1betaall[1]>0.000 && c1betaall[1]<c1cut) MultiAllC1cutpT[1][j][ptbin]->Fill(sumall,1./multibin);  //quark jet
+                            if(c1betaall[1]>c1cut && c1betaall[1]<0.500) MultiAllC1cutpT[2][j][ptbin]->Fill(sumall,1./multibin);  //gluon jet
+                        }
                     }
                 }
 
             }//End of jet loop
 
         }//End of particle loop
-       
+
     }//End of event loop
 
 
@@ -254,11 +332,21 @@ int main(int argc, char **argv)
     EtaDis->Scale(1./EtaDis->GetEntries());
     PhiDis->Scale(1./PhiDis->GetEntries());
     for(int i=0; i<ntype; i++){
-        for(int j=1; j<npTbin; j++){  //j!=0: delete the minimum pt bin
-            Multi[i]->SetBinContent(j+1,MultipT[i][j]->GetMean());
-            Multi[i]->SetBinError(j+1,MultipT[i][j]->GetMeanError());
-            MultiAll[i]->SetBinContent(j+1,MultiAllpT[i][j]->GetMean());
-            MultiAll[i]->SetBinError(j+1,MultiAllpT[i][j]->GetMeanError());
+        for(int j=0; j<nbeta; j++){
+            for(int k=1; k<npTbin; k++){  //k!=0: delete the minimum pt bin
+                C1betapT[i][j][k]->Scale(1./C1betapT[i][j][k]->GetEntries());
+                C1betaAllpT[i][j][k]->Scale(1./C1betaAllpT[i][j][k]->GetEntries());
+            }
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            for(int k=1; k<npTbin; k++){  //k!=0: delete the minimum pt bin
+                MultiC1cut[i][j]->SetBinContent(k+1,MultiC1cutpT[i][j][k]->GetMean());
+                MultiC1cut[i][j]->SetBinError(k+1,MultiC1cutpT[i][j][k]->GetMeanError());
+                MultiAllC1cut[i][j]->SetBinContent(k+1,MultiAllC1cutpT[i][j][k]->GetMean());
+                MultiAllC1cut[i][j]->SetBinError(k+1,MultiAllC1cutpT[i][j][k]->GetMeanError());
+            }
         }
     }
 
@@ -379,15 +467,33 @@ void WriteHistograms(const std::string OutputString)
     EtaDis->Write();
     PhiDis->Write();
     for(int i=0; i<ntype; i++){
-        Multi[i]->Write();
-        for(int j=0; j<npTbin; j++){
-            MultipT[i][j]->Write();
+        for(int j=0; j<nbeta; j++){
+            for(int k=0; k<npTbin; k++){
+                C1betapT[i][j][k]->Write();
+            }
         }
     }
     for(int i=0; i<ntype; i++){
-        MultiAll[i]->Write();
-        for(int j=0; j<npTbin; j++){
-            MultiAllpT[i][j]->Write();
+        for(int j=0; j<nbeta; j++){
+            for(int k=0; k<npTbin; k++){
+                C1betaAllpT[i][j][k]->Write();
+            }
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            MultiC1cut[i][j]->Write();
+            for(int k=0; k<npTbin; k++){
+                MultiC1cutpT[i][j][k]->Write();
+            }
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            MultiAllC1cut[i][j]->Write();
+            for(int k=0; k<npTbin; k++){
+                MultiAllC1cutpT[i][j][k]->Write();
+            }
         }
     }
 
@@ -407,11 +513,21 @@ void DeleteHistograms()
     delete EtaDis;
     delete PhiDis;
     for(int i=0; i<ntype; i++){
-        delete Multi[i];
-        delete MultiAll[i];
-        for(int j=0; j<npTbin; j++){
-            delete MultipT[i][j];
-            delete MultiAllpT[i][j];
+        for(int j=0; j<nbeta; j++){
+            for(int k=0; k<npTbin; k++){
+                delete C1betapT[i][j][k];
+                delete C1betaAllpT[i][j][k];
+            }
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            delete MultiC1cut[i][j];
+            delete MultiAllC1cut[i][j];
+            for(int k=0; k<npTbin; k++){
+                delete MultiC1cutpT[i][j][k];
+                delete MultiAllC1cutpT[i][j][k];
+            }
         }
     }
 

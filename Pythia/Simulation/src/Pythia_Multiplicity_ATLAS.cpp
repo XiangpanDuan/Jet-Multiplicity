@@ -74,6 +74,9 @@ int main(){
     // pythia.readString("PartonLevel:FSRinProcess = on");
     // pythia.readString("PartonLevel:FSRinResonances = on");
     // pythia.readString("PartonLevel:earlyResDec = off");
+    // pythia.readString("PartonLevel:Remnants = on");
+
+    // //Parton scale
     // pythia.readString("TimeShower:pTmin = 2.0");  //parton shower cut-off pT for QCD emissions
 
     //Hadron level
