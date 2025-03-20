@@ -128,7 +128,7 @@ namespace CalculateLO{
       //Record end time
       auto endtime=std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> duration=endtime-starttime;
-      std::cout << "Function execution time: " << duration.count() << " seconds" << std::endl;
+      std::cout << "Execution time: " << duration.count() << " seconds" << std::endl;
 
     }//End of pT loop
 
@@ -143,8 +143,8 @@ namespace CalculateLO{
 
 
   //------------------------------------------------------------
-  //Cross section calculation: dsigma/dpT
-  void CaldSigmaLO(){
+  //Differential cross section calculation: dsigma/dpT
+  void CalDSigmaLO(){
 
     //Record start time
     auto starttime = std::chrono::high_resolution_clock::now();
@@ -224,7 +224,7 @@ namespace CalculateLO{
       //Record end time
       auto endtime=std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> duration=endtime-starttime;
-      std::cout << "Function execution time: " << duration.count() << " seconds" << std::endl;
+      std::cout << "Execution time: " << duration.count() << " seconds" << std::endl;
 
     }//End of pT loop
 
@@ -256,7 +256,6 @@ namespace CalculateLO{
 
 
 
-
 //####################################################################################################
 //Main function
 int main(){
@@ -271,7 +270,7 @@ int main(){
   }
 
   // CalculateLO::CalSigmaLO();
-  CalculateLO::CaldSigmaLO();
+  CalculateLO::CalDSigmaLO();
 
   // CalculateLO::Test();
 
