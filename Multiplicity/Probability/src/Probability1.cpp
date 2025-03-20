@@ -17,17 +17,17 @@ const int    num=5000;
 std::vector<std::vector<double>> Pq(pTnum, std::vector<double>(Pnum, 0.0));
 std::vector<std::vector<double>> Pg(pTnum, std::vector<double>(Pnum, 0.0));
 std::vector<std::vector<double>> S (pTnum, std::vector<double>(Pnum, 0.0));
-std::vector<std::vector<std::vector<double>>> PTable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num+1, 0.0)));
-std::vector<std::vector<std::vector<double>>> STable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num+1, 0.0)));
+std::vector<std::vector<std::vector<double>>> PTable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num, 0.0)));
+std::vector<std::vector<std::vector<double>>> STable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num, 0.0)));
 double Rsize=0.4;
-double Q0=0.5;  //infrared cutoff
+double Q0=0.5;  //perturbative sacle
 double LambdaQCD=0.2457484;
 double lambda=std::log(Q0/LambdaQCD);
-// double alphas=0.1;
-double Nc=3.0;
-double CA=3.0;
+double alphas=0.1;
+double Nc=3.;
+double CA=3.;
 double CF=4./3.;
-int    nf=3;
+unsigned int nf=3;
 double b=11./3.*Nc-2./3.*nf;
 double ymin,ymax,ybin;
 double Pqsum,Pgsum;
@@ -39,7 +39,7 @@ int    ival,jval;
 double LinearInterpolation(const double yp){
   int ylow=(int)(std::floor(yp/ybin));
   int yhigh=ylow+1;
-  if(ylow<0 || yhigh>num) return 0.0;
+  if(ylow<0 || yhigh>=num) return 0.0;
   return PTable[ival][jval][ylow]+(PTable[ival][jval][yhigh]-PTable[ival][jval][ylow])*(yp-ylow*ybin)/ybin;
 }
 
@@ -62,18 +62,16 @@ double FunctionBase(const double yp, void *params){
 
 
 //------------------------------------------------------------
-//Calculate probability distribution
 void CalProbability(){
 
-  //------------------------------
   //Output files
   std::stringstream ss[3];
-  ss[0] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Multi.dat";
-  ss[1] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Quark.dat";
-  ss[2] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Gluon.dat";
-  // ss[0] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Multi.dat";
-  // ss[1] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Quark.dat";
-  // ss[2] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Gluon.dat";
+  ss[0] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Multi.dat";
+  ss[1] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Quark.dat";
+  ss[2] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Gluon.dat";
+  // ss[0] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Multi.dat";
+  // ss[1] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Quark.dat";
+  // ss[2] << "../Output/LL_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Gluon.dat";
   std::string OutputString[3];
   std::ofstream OutputFile[3];
   for(int i=0; i<3; i++){
@@ -89,7 +87,7 @@ void CalProbability(){
     }
   }
 
-  //------------------------------
+
   //pT loop
   for(int i=0; i<pTnum; i++){
     ival=i;
@@ -105,20 +103,16 @@ void CalProbability(){
     nMulq=0.0;
     nMulg=0.0;
 
-    double res,err;
-
-    //------------------------------
     //Probability loop
     for(int j=0; j<Pnum; j++){
       jval=j;
 
-      //------------------------------
+      double res,err;
+
       //Probability integral table
-      if(j==0) PTable[i][j][0]=1.0;  //the minimum interpolation for P1(0) in the table
-      if(j!=0) PTable[i][j][0]=0.0;  //the minimum interpolation for Pn(0) in the table
-      for(int k=1; k<(num+1); k++){
+      for(int k=0; k<num; k++){
         ymin=0.0;
-        ymax=ybin*k;  //update current y value
+        ymax=ybin*(k+1);  //update current y value
         if(j==0){
           gsl_function FunBase;
           FunBase.function = &FunctionBase;
@@ -138,17 +132,16 @@ void CalProbability(){
         gsl_function Fun;
         Fun.function = &Function;
         Fun.params = nullptr;
-        gsl_integration_workspace *wspace = gsl_integration_workspace_alloc(10000);
+        gsl_integration_workspace *workspace = gsl_integration_workspace_alloc(10000);
         res=0.0; err=0.0;
-        gsl_integration_qag(&Fun, ymin, ymax, 1e-6, 1e-6, 10000, 6, wspace, &res, &err);
-        // gsl_integration_qags(&Fun, ymin, ymax, 1e-6, 1e-6, 10000, wspace, &res, &err);
-        gsl_integration_workspace_free(wspace);
-        STable[i][j][k]=res;  //not consider k=0
+        gsl_integration_qag(&Fun, ymin, ymax, 1e-6, 1e-6, 10000, 6, workspace, &res, &err);
+        // gsl_integration_qags(&Fun, ymin, ymax, 1e-6, 1e-6, 10000, workspace, &res, &err);
+        gsl_integration_workspace_free(workspace);
+        STable[i][j][k]=res;
+        if(res<0) std::cout << "i=" << i << ", j=" << j << ", k=" << k << ", S=" << STable[i][j][k] << std::endl;
+      }
 
-      }//End of probability integral table
 
-
-      //------------------------------
       //Probability value
       ymin=0.0;
       ymax=std::log(Q/Q0);
@@ -156,11 +149,11 @@ void CalProbability(){
         gsl_function FBase;
         FBase.function = &FunctionBase;
         FBase.params = nullptr;
-        gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(10000);
+        gsl_integration_workspace *ws = gsl_integration_workspace_alloc(10000);
         res=0.0; err=0.0;
-        gsl_integration_qag(&FBase, ymin, ymax, 1e-6, 1e-6, 10000, 6, wsp, &res, &err);
-        // gsl_integration_qags(&FBase, ymin, ymax, 1e-6, 1e-6, 10000, wsp, &res, &err);
-        gsl_integration_workspace_free(wsp);
+        gsl_integration_qag(&FBase, ymin, ymax, 1e-6, 1e-6, 10000, 6, ws, &res, &err);
+        // gsl_integration_qags(&FBase, ymin, ymax, 1e-6, 1e-6, 10000, ws, &res, &err);
+        gsl_integration_workspace_free(ws);
         Pq[i][j]=std::exp(-(CF/Nc)*res);
         Pg[i][j]=std::exp(-(CA/Nc)*res);
       }
@@ -173,15 +166,14 @@ void CalProbability(){
       gsl_function F;
       F.function = &Function;
       F.params = nullptr;
-      gsl_integration_workspace *ws = gsl_integration_workspace_alloc(10000);
+      gsl_integration_workspace *wsp = gsl_integration_workspace_alloc(10000);
       res=0.0; err=0.0;
-      gsl_integration_qag(&F, ymin, ymax, 1e-6, 1e-6, 10000, 6, ws, &res, &err);
-      // gsl_integration_qags(&F, ymin, ymax, 1e-6, 1e-6, 10000, ws, &res, &err);
-      gsl_integration_workspace_free(ws);
+      gsl_integration_qag(&F, ymin, ymax, 1e-6, 1e-6, 10000, 6, wsp, &res, &err);
+      // gsl_integration_qags(&F, ymin, ymax, 1e-6, 1e-6, 10000, wsp, &res, &err);
+      gsl_integration_workspace_free(wsp);
       S[i][j]=res;
 
 
-      //------------------------------
       //Output files
       nMulq+=(j+1)*Pq[i][j];
       nMulg+=(j+1)*Pg[i][j];
@@ -216,4 +208,3 @@ int main(){
 
   return 0;
 }
-
