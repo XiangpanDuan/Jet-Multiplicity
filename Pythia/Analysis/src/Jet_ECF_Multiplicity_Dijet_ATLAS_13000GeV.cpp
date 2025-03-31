@@ -30,15 +30,27 @@ TH1D *pTDis    = new TH1D("pTDis",   "pTDis",   300,0.,3000.);
 TH1D *EtaDis   = new TH1D("EtaDis",  "EtaDis",  100,-5.,5.);
 TH1D *PhiDis   = new TH1D("PhiDis",  "PhiDis",  36,-M_PI,M_PI);
 const int ntype=3;
-const int nbeta=6;
-const int nc1cut=20;
 const int npTbin=16;
+const int nbeta=6;
+const int nc1cut=40;
+//Multiplicity
+TH1D *Multi[ntype];
+TH1D *MultipT[ntype][npTbin];
+TH1D *MultiAll[ntype];
+TH1D *MultiAllpT[ntype][npTbin];
+//Energy Correlation Function (ECF)
 TH1D *C1betapT[ntype][nbeta][npTbin];
 TH1D *C1betaAllpT[ntype][nbeta][npTbin];
+//Multiplicity with ECF
 TH1D *MultiC1cut[ntype][nc1cut];
 TH1D *MultiAllC1cut[ntype][nc1cut];
 TH1D *MultiC1cutpT[ntype][nc1cut][npTbin];
 TH1D *MultiAllC1cutpT[ntype][nc1cut][npTbin];
+//Multiplicity with ECF and Quark/Gluon Jet
+TH1D *MultiC1cutType[ntype][nc1cut];
+TH1D *MultiAllC1cutType[ntype][nc1cut];
+TH1D *MultiC1cutTypepT[ntype][nc1cut][npTbin];
+TH1D *MultiAllC1cutTypepT[ntype][nc1cut][npTbin];
 double betavalue[nbeta]={0.1,0.2,0.5,1.,2.,3.};
 double pTrange[npTbin+1]={0.,100.,200.,300.,400.,500.,600.,700.,800.,900.,1000.,1200.,1400.,1600.,2000.,2500.,3000.};
 
@@ -72,15 +84,31 @@ int main(int argc, char **argv)
     double multimin=-0.5, multimax=199.5;
     double multibin=(multimax-multimin)/multinum;
     for(int i=0; i<ntype; i++){
+        Multi[i] = new TH1D(Form("Multi%d",i),Form("Multi%d",i),3000,0.,3000.);
+        MultiAll[i] = new TH1D(Form("MultiAll%d",i),Form("MultiAll%d",i),3000,0.,3000.);
+        Multi[i]->SetBins(npTbin,pTrange);
+        MultiAll[i]->SetBins(npTbin,pTrange);
+        for(int j=0; j<npTbin; j++){
+            MultipT[i][j] = new TH1D(Form("Multi%d_pT%d",i,j),Form("Multi%d_pT%d",i,j),multinum,multimin,multimax);
+            MultiAllpT[i][j] = new TH1D(Form("MultiAll%d_pT%d",i,j),Form("MultiAll%d_pT%d",i,j),multinum,multimin,multimax);
+        }
+    }
+    for(int i=0; i<ntype; i++){
         for(int j=0; j<nc1cut; j++){
-            double c1cut=(j+10)/100.;
+            double c1cut=(j+1)/100.;
             MultiC1cut[i][j]    = new TH1D(Form("Multi_%d_C1cut%.2f",i,c1cut),   Form("Multi_%d_C1cut%.2f",i,c1cut),   3000,0.,3000.);
             MultiAllC1cut[i][j] = new TH1D(Form("MultiAll_%d_C1cut%.2f",i,c1cut),Form("MultiAll_%d_C1cut%.2f",i,c1cut),3000,0.,3000.);
             MultiC1cut[i][j]->SetBins(npTbin,pTrange);
             MultiAllC1cut[i][j]->SetBins(npTbin,pTrange);
+            MultiC1cutType[i][j]    = new TH1D(Form("Multi_%d_C1cutType%.2f",i,c1cut),   Form("Multi_%d_C1cutType%.2f",i,c1cut),   3000,0.,3000.);
+            MultiAllC1cutType[i][j] = new TH1D(Form("MultiAll_%d_C1cutType%.2f",i,c1cut),Form("MultiAll_%d_C1cutType%.2f",i,c1cut),3000,0.,3000.);
+            MultiC1cutType[i][j]->SetBins(npTbin,pTrange);
+            MultiAllC1cutType[i][j]->SetBins(npTbin,pTrange);
             for(int k=0; k<npTbin; k++){
                 MultiC1cutpT[i][j][k]    = new TH1D(Form("Multi_%d_C1cut%.2f_pT%d",i,c1cut,k),   Form("Multi_%d_C1cut%.2f_pT%d",i,c1cut,k),   multinum,multimin,multimax);
                 MultiAllC1cutpT[i][j][k] = new TH1D(Form("MultiAll_%d_C1cut%.2f_pT%d",i,c1cut,k),Form("MultiAll_%d_C1cut%.2f_pT%d",i,c1cut,k),multinum,multimin,multimax);
+                MultiC1cutTypepT[i][j][k]    = new TH1D(Form("Multi_%d_C1cutType%.2f_pT%d",i,c1cut,k),   Form("Multi_%d_C1cutType%.2f_pT%d",i,c1cut,k),   multinum,multimin,multimax);
+                MultiAllC1cutTypepT[i][j][k] = new TH1D(Form("MultiAll_%d_C1cutType%.2f_pT%d",i,c1cut,k),Form("MultiAll_%d_C1cutType%.2f_pT%d",i,c1cut,k),multinum,multimin,multimax);
             }
         }
     }
@@ -102,11 +130,9 @@ int main(int argc, char **argv)
     else if(jet_ptmin==1000.) ptdiff=20.;
     else if(jet_ptmin==1600.) ptdiff=20.;
     std::stringstream ssin,ssout;
-    // if(mode==0) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV" << "_Tune21_MPIoff";
     if(mode==0) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Parton_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_C1cut_Tune21";
     if(mode==1) ssout << "../Output/ATLAS_ECF_Multiplicity_DiJet_Hadron_13000GeV_" << jet_ptmin << "GeV_R" << Rsize << "_pTmin" << constituent_ptmin << "GeV_C1cut_Tune21";
     std::string OutputString=ssout.str();
-    // if(mode==0) ssin  << "../../Simulation/Output/ATLAS_DiJet_Parton_13000GeV_" << jet_ptmin-ptdiff << "GeV_Tune21_MPIoff.dat";
     if(mode==0) ssin  << "../../Simulation/Output/ATLAS_DiJet_Parton_13000GeV_" << jet_ptmin-ptdiff << "GeV_Tune21.dat";
     if(mode==1) ssin  << "../../Simulation/Output/ATLAS_DiJet_Hadron_13000GeV_" << jet_ptmin-ptdiff << "GeV_Tune21.dat";
     std::string InputString=ssin.str();
@@ -121,8 +147,7 @@ int main(int argc, char **argv)
 
     //------------------------------------------------------------
     //Event loop
-    int nEvents=1000;
-    // int nEvents=10000000;  //number of events
+    int nEvents=10000000;  //number of events
     std::cout << "Total events: " << nEvents << std::endl;
     for(int iEvent=1; iEvent<=nEvents; iEvent++){
         //Write current working event
@@ -202,6 +227,7 @@ int main(int argc, char **argv)
             for(unsigned int iJet=0; iJet<2; iJet++){
                 for(int i=2; i<4; i++){
                     if(std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())<(1./3.*M_PI) || std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())>(5./3.*M_PI)) {islable[iJet]=i;}
+                    // if(std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())<(1./6.*M_PI) || std::abs(Hard_phi[i]-inclusive_jets[iJet].phi_std())>(11./6.*M_PI)) {islable[iJet]=i;}
                 }
             }
             // if(islable[0]==0 || islable[1]==0) continue;
@@ -225,6 +251,7 @@ int main(int argc, char **argv)
                 std::vector<fastjet::PseudoJet> constituents=inclusive_jets[iJet].constituents();
                 if(constituents.size()==0) continue;
 
+                //------------------------------------------------------------
                 //Energy correlation function
                 double c1beta[nbeta];
                 double c1betaall[nbeta];
@@ -275,6 +302,7 @@ int main(int argc, char **argv)
                     }
                 }
 
+                //------------------------------------------------------------
                 //Multiplicity
                 int sumcharge=0;
                 int sumall=0;
@@ -294,30 +322,53 @@ int main(int argc, char **argv)
                 }
                 //Charged multiplicity
                 if(sumcharge!=0){
+                    MultipT[0][ptbin]->Fill(sumcharge,1./multibin);                                                                     //charged jet
+                    if(islable[0]!=0 && islable[1]!=0){  //leading jet and subleading jet
+                        if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultipT[1][ptbin]->Fill(sumcharge,1./multibin);  //quark jet
+                        if(std::abs(Hard_id[lable])==21) MultipT[2][ptbin]->Fill(sumcharge,1./multibin);                                //gluon jet
+                    }
+                }
+                //All multiplicity
+                if(sumall!=0){
+                    MultiAllpT[0][ptbin]->Fill(sumall,1./multibin);                                                                     //all   jet
+                    if(islable[0]!=0 && islable[1]!=0){  //leading jet and subleading jet
+                        if(std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultiAllpT[1][ptbin]->Fill(sumall,1./multibin);  //quark jet
+                        if(std::abs(Hard_id[lable])==21) MultiAllpT[2][ptbin]->Fill(sumall,1./multibin);                                //gluon jet
+                    }
+                }
+                //Charged multiplicity with ECF and quark/gluon jet
+                if(sumcharge!=0){
                     for(int j=0; j<nc1cut; j++){
-                        double c1cut=(j+10)/100.;
-                        MultiC1cutpT[0][j][ptbin]->Fill(sumcharge,1./multibin);  //charged jet
+                        double c1cut=(j+1)/100.;
+                        MultiC1cutpT[0][j][ptbin]->Fill(sumcharge,1./multibin);      //charged jet
+                        MultiC1cutTypepT[0][j][ptbin]->Fill(sumcharge,1./multibin);  //charged jet
                         //Keeping the leading and subleading jets consistent in the initial and final state
                         if(islable[0]!=0 && islable[1]!=0){
                             //c1beta[1] means beta=0.2
                             if(c1beta[1]>0.000 && c1beta[1]<c1cut) MultiC1cutpT[1][j][ptbin]->Fill(sumcharge,1./multibin);  //quark jet
                             if(c1beta[1]>c1cut && c1beta[1]<0.500) MultiC1cutpT[2][j][ptbin]->Fill(sumcharge,1./multibin);  //gluon jet
+                            if(c1beta[1]>0.000 && c1beta[1]<c1cut && std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultiC1cutTypepT[1][j][ptbin]->Fill(sumcharge,1./multibin);  //quark jet
+                            if(c1beta[1]>c1cut && c1beta[1]<0.500 && std::abs(Hard_id[lable])==21) MultiC1cutTypepT[2][j][ptbin]->Fill(sumcharge,1./multibin);                                //gluon jet
                         }
                     }
                 }
-                //All multiplicity
+                //All multiplicity with ECF
                 if(sumall!=0){
                     for(int j=0; j<nc1cut; j++){
-                        double c1cut=(j+10)/100.;
-                        MultiAllC1cutpT[0][j][ptbin]->Fill(sumall,1./multibin);  //all jet
+                        double c1cut=(j+1)/100.;
+                        MultiAllC1cutpT[0][j][ptbin]->Fill(sumall,1./multibin);      //all jet
+                        MultiAllC1cutTypepT[0][j][ptbin]->Fill(sumall,1./multibin);  //all jet
                         //Keeping the leading and subleading jets consistent in the initial and final state
                         if(islable[0]!=0 && islable[1]!=0){
                             //c1betaall[1] means beta=0.2
                             if(c1betaall[1]>0.000 && c1betaall[1]<c1cut) MultiAllC1cutpT[1][j][ptbin]->Fill(sumall,1./multibin);  //quark jet
                             if(c1betaall[1]>c1cut && c1betaall[1]<0.500) MultiAllC1cutpT[2][j][ptbin]->Fill(sumall,1./multibin);  //gluon jet
+                            if(c1betaall[1]>0.000 && c1betaall[1]<c1cut && std::abs(Hard_id[lable])>=1 && std::abs(Hard_id[lable])<=6) MultiAllC1cutTypepT[1][j][ptbin]->Fill(sumall,1./multibin);  //quark jet
+                            if(c1betaall[1]>c1cut && c1betaall[1]<0.500 && std::abs(Hard_id[lable])==21) MultiAllC1cutTypepT[2][j][ptbin]->Fill(sumall,1./multibin);                                //gluon jet
                         }
                     }
                 }
+
 
             }//End of jet loop
 
@@ -331,6 +382,14 @@ int main(int argc, char **argv)
     pTDis->Scale(1./pTDis->GetEntries());
     EtaDis->Scale(1./EtaDis->GetEntries());
     PhiDis->Scale(1./PhiDis->GetEntries());
+     for(int i=0; i<ntype; i++){
+        for(int j=1; j<npTbin; j++){  //j!=0: delete the minimum pt bin
+            Multi[i]->SetBinContent(j+1,MultipT[i][j]->GetMean());
+            Multi[i]->SetBinError(j+1,MultipT[i][j]->GetMeanError());
+            MultiAll[i]->SetBinContent(j+1,MultiAllpT[i][j]->GetMean());
+            MultiAll[i]->SetBinError(j+1,MultiAllpT[i][j]->GetMeanError());
+        }
+    }
     for(int i=0; i<ntype; i++){
         for(int j=0; j<nbeta; j++){
             for(int k=1; k<npTbin; k++){  //k!=0: delete the minimum pt bin
@@ -346,6 +405,10 @@ int main(int argc, char **argv)
                 MultiC1cut[i][j]->SetBinError(k+1,MultiC1cutpT[i][j][k]->GetMeanError());
                 MultiAllC1cut[i][j]->SetBinContent(k+1,MultiAllC1cutpT[i][j][k]->GetMean());
                 MultiAllC1cut[i][j]->SetBinError(k+1,MultiAllC1cutpT[i][j][k]->GetMeanError());
+                MultiC1cutType[i][j]->SetBinContent(k+1,MultiC1cutTypepT[i][j][k]->GetMean());
+                MultiC1cutType[i][j]->SetBinError(k+1,MultiC1cutTypepT[i][j][k]->GetMeanError());
+                MultiAllC1cutType[i][j]->SetBinContent(k+1,MultiAllC1cutTypepT[i][j][k]->GetMean());
+                MultiAllC1cutType[i][j]->SetBinError(k+1,MultiAllC1cutTypepT[i][j][k]->GetMeanError());
             }
         }
     }
@@ -467,6 +530,18 @@ void WriteHistograms(const std::string OutputString)
     EtaDis->Write();
     PhiDis->Write();
     for(int i=0; i<ntype; i++){
+        Multi[i]->Write();
+        for(int j=0; j<npTbin; j++){
+            MultipT[i][j]->Write();
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        MultiAll[i]->Write();
+        for(int j=0; j<npTbin; j++){
+            MultiAllpT[i][j]->Write();
+        }
+    }
+    for(int i=0; i<ntype; i++){
         for(int j=0; j<nbeta; j++){
             for(int k=0; k<npTbin; k++){
                 C1betapT[i][j][k]->Write();
@@ -496,6 +571,22 @@ void WriteHistograms(const std::string OutputString)
             }
         }
     }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            MultiC1cutType[i][j]->Write();
+            for(int k=0; k<npTbin; k++){
+                MultiC1cutTypepT[i][j][k]->Write();
+            }
+        }
+    }
+    for(int i=0; i<ntype; i++){
+        for(int j=0; j<nc1cut; j++){
+            MultiAllC1cutType[i][j]->Write();
+            for(int k=0; k<npTbin; k++){
+                MultiAllC1cutTypepT[i][j][k]->Write();
+            }
+        }
+    }
 
     File->Write();
     File->Close();
@@ -513,6 +604,14 @@ void DeleteHistograms()
     delete EtaDis;
     delete PhiDis;
     for(int i=0; i<ntype; i++){
+        delete Multi[i];
+        delete MultiAll[i];
+        for(int j=0; j<npTbin; j++){
+            delete MultipT[i][j];
+            delete MultiAllpT[i][j];
+        }
+    }
+    for(int i=0; i<ntype; i++){
         for(int j=0; j<nbeta; j++){
             for(int k=0; k<npTbin; k++){
                 delete C1betapT[i][j][k];
@@ -524,9 +623,13 @@ void DeleteHistograms()
         for(int j=0; j<nc1cut; j++){
             delete MultiC1cut[i][j];
             delete MultiAllC1cut[i][j];
+            delete MultiC1cutType[i][j];
+            delete MultiAllC1cutType[i][j];
             for(int k=0; k<npTbin; k++){
                 delete MultiC1cutpT[i][j][k];
                 delete MultiAllC1cutpT[i][j][k];
+                delete MultiC1cutTypepT[i][j][k];
+                delete MultiAllC1cutTypepT[i][j][k];
             }
         }
     }
