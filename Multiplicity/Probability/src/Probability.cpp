@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <gsl/gsl_integration.h>
+#include "LHAPDF/LHAPDF.h"
 
 
 double pT,Q;
@@ -19,16 +20,12 @@ std::vector<std::vector<double>> Pg(pTnum, std::vector<double>(Pnum, 0.0));
 std::vector<std::vector<double>> S (pTnum, std::vector<double>(Pnum, 0.0));
 std::vector<std::vector<std::vector<double>>> PTable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num+1, 0.0)));
 std::vector<std::vector<std::vector<double>>> STable(pTnum, std::vector<std::vector<double>>(Pnum, std::vector<double>(num+1, 0.0)));
-double Rsize=0.4;
-double Q0=0.5;  //infrared cutoff
-double LambdaQCD=0.2457484;
-double lambda=std::log(Q0/LambdaQCD);
+double Rsize=0.4;  //jet cone size
+double Q0=1.0;     //infrared cutoff
 // double alphas=0.1;
 double Nc=3.0;
 double CA=3.0;
 double CF=4./3.;
-int    nf=3;
-double b=11./3.*Nc-2./3.*nf;
 double ymin,ymax,ybin;
 double Pqsum,Pgsum;
 double nMulq,nMulg;
@@ -36,6 +33,15 @@ int    ival,jval;
 
 
 //------------------------------------------------------------
+//Alphas(kT^2)
+LHAPDF::PDF *pdf = LHAPDF::mkPDF("CT18NLO",0);
+double AlphaS(const double yp){
+  double kT=Q0*std::exp(yp);
+  return pdf->alphasQ(kT);
+}
+
+//------------------------------------------------------------
+//Linear interpolation
 double LinearInterpolation(const double yp){
   int ylow=(int)(std::floor(yp/ybin));
   int yhigh=ylow+1;
@@ -44,36 +50,35 @@ double LinearInterpolation(const double yp){
 }
 
 //------------------------------------------------------------
+//Integral table (0,y')
 double Function(const double yp, void *params){
   (void) (params);
-  double gamma0square=4.*Nc/(b*(yp+lambda));
-  // double gamma0square=2.*alphas*Nc/M_PI;
+  double gamma0square=2.*Nc/M_PI*AlphaS(yp);
+  // double gamma0square=2.*Nc/M_PI*alphas;
   double Pval=LinearInterpolation(yp);
   return (ymax-yp)*gamma0square*Pval;
 }
 
 //------------------------------------------------------------
+//Integral (0,y)
 double FunctionBase(const double yp, void *params){
   (void) (params);
-  double gamma0square=4.*Nc/(b*(yp+lambda));
-  // double gamma0square=2.*alphas*Nc/M_PI;
+  double gamma0square=2.*Nc/M_PI*AlphaS(yp);
+  // double gamma0square=2.*Nc/M_PI*alphas;
   return (ymax-yp)*gamma0square;
 }
 
 
 //------------------------------------------------------------
-//Calculate probability distribution
+//Calculate probability
 void CalProbability(){
 
   //------------------------------
   //Output files
   std::stringstream ss[3];
-  ss[0] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Multi.dat";
-  ss[1] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Quark.dat";
-  ss[2] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Gluon.dat";
-  // ss[0] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Multi.dat";
-  // ss[1] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Quark.dat";
-  // ss[2] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_Alphas" << alphas << "_Gluon.dat";
+  ss[0] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_AlphaS" << "_Multi.dat";
+  ss[1] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_AlphaS" << "_Quark.dat";
+  ss[2] << "../Output/DLA_Probability_Q" << Q0 << "_R" << Rsize << "_AlphaS" << "_Gluon.dat";
   std::string OutputString[3];
   std::ofstream OutputFile[3];
   for(int i=0; i<3; i++){
@@ -135,6 +140,7 @@ void CalProbability(){
             PTable[i][j][k]+=(double)(jj+1)/j*PTable[i][j-1-jj][k]*STable[i][jj][k]*(CA/Nc);
           }
         }
+        // if(k==1 && (j==0 || j==1)) std::cout << pT << " " << PTable[i][j][k] << std::endl;
         gsl_function Fun;
         Fun.function = &Function;
         Fun.params = nullptr;
@@ -210,9 +216,16 @@ void CalProbability(){
 
 
 //####################################################################################################
+//Main function
 int main(){
 
+  std::cout << "################################################################################" << std::endl;
+  std::cout << "# Jet Multiplicity Distribution P(n) in Double Logarithmic Approximation (DLA) #" << std::endl;
+  std::cout << "################################################################################" << std::endl;
+
+
   CalProbability();
+
 
   return 0;
 }

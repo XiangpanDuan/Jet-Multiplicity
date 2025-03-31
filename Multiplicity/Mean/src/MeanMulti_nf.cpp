@@ -15,20 +15,23 @@ int main()
   double Q0=0.5;  //infrared cutoff
   double Rsize=0.4;
 
+  // int    nf=3;
+  // double LambdaQCD=0.2457484;  //nf=3
+  int    nf=5;
+  double LambdaQCD=0.0878275;  //nf=5
+
   std::stringstream ss;
-  if(mode==0) ss << "../Output/DLA_Multi_Q"  << Q0 << "_R" << Rsize << ".dat";
-  if(mode==1) ss << "../Output/MDLA_Multi_Q" << Q0 << "_R" << Rsize << ".dat";
+  if(mode==0) ss << "../Output/DLA_Multi_Q"  << Q0 << "_R" << Rsize << "_nf" << nf << ".dat";
+  if(mode==1) ss << "../Output/MDLA_Multi_Q" << Q0 << "_R" << Rsize << "_nf" << nf << ".dat";
   std::string OutputString=ss.str();
   std::ofstream OutputFile;
   OutputFile.open(OutputString);
   OutputFile << "# pT <multiQ> <multiG>" << std::endl;
 
   double par=1.0;
-  double LambdaQCD=0.2457484;
   double CF=4./3.;
   // double CA=3.0;
   double Nc=3.0;
-  int    nf=3;
   double a=11./3.*Nc+2.*nf/(3.*Nc*Nc);
   double b=11./3.*Nc-2./3.*nf;
   double A=std::sqrt(16.*Nc/b);

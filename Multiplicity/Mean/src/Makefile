@@ -7,14 +7,14 @@ LGSL = ${shell gsl-config --libs}
 # LGSL = -L/Users/duanxiangpan/Desktop/Work/Model/GSL/gsl-install/lib -lgsl -lgslcblas -lm
 
 
-TARGET = MeanMulti.exe
+TARGET = MeanMulti_nf.exe
 all: $(TARGET)
 
-MeanMulti.o: MeanMulti.cpp
-	$(CXX) $(CXXFLAGS) $(IGSL) -c MeanMulti.cpp
+MeanMulti_nf.o: MeanMulti_nf.cpp
+	$(CXX) $(CXXFLAGS) $(IGSL) -c MeanMulti_nf.cpp
 
-$(TARGET): MeanMulti.o
-	$(CXX) $(CXXFLAGS) MeanMulti.o $(LGSL) -o $@
+$(TARGET): MeanMulti_nf.o
+	$(CXX) $(CXXFLAGS) MeanMulti_nf.o $(LGSL) -o $@
 	
 
 clean:
