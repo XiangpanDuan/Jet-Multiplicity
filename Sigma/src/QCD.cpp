@@ -2,13 +2,13 @@
 
 
 QCD::QCD(){
-  setQCDInitialCondition();
-  setNf(3);
+  setInitialConditionQCD();
+  setNfQCD(3);  //quark flavors, 3 by default
 }
 
 QCD::QCD(const int nf){
-  setQCDInitialCondition();
-  setNf(nf);
+  setInitialConditionQCD();
+  setNfQCD(nf);
 }
 
 QCD::~QCD(){
@@ -16,25 +16,24 @@ QCD::~QCD(){
   delete _Z0;
 }
 
-void QCD::setQCDInitialCondition(){
+void QCD::setInitialConditionQCD(){
   _TF=0.5;
   _Nc=3.0; _CA=3.0; _CF=4.0/3.0;
 
   _Z0 = new Particle("Z0");
 
   //Download the pdfset from https://lhapdf.hepforge.org/pdfsets.html and put it into the folder which can be found out by lhapdf-config --datadir
-  const int imem=0;  //load file member
-  _pdf = LHAPDF::mkPDF("CT18NLO",imem);  //or CT14nlo
-  // _pdf = LHAPDF::mkPDF("NNPDF23_lo_as_0130_qed",imem);  //same PDF with the default MadGraph model
+  const int imem=0;                      //load the file member
+  _pdf = LHAPDF::mkPDF("CT18NLO",imem);  //CT14nlo
 }
 
-void QCD::setNf(const int nf){
+void QCD::setNfQCD(const int nf){
   _nf=nf;
-  setQCDParameters();
+  setParametersQCD();
   // std::cout << "_nf=" << _nf << std::endl;
 }
 
-void QCD::setQCDParameters(){
+void QCD::setParametersQCD(){
   //beta_i
   _beta0=11.0*_Nc/3.0-2.0*_nf/3.0;
   _beta1=34.0*_Nc*_Nc/3.0-10.0*_Nc*_nf/3.0-2.0*_CF*_nf;
@@ -65,19 +64,20 @@ void QCD::setQCDParameters(){
 //Λ_QCD
 double QCD::LambdaQCD(const int nloop){
   //LO with 1-loop β-function coefficient
-  // double alphaS_mZ2=0.118;
+  // _beta0=11.0*_Nc/3.0-2.0*_nf/3.0;
   // double b0=_beta0/(4.*M_PI);
-  // _lambdaQCD=_Z0->Mass()/std::pow(std::exp(1./(b0*alphaS_mZ2)),0.5);
+  // double AlphaS_mZ2=0.118;
+  // _lambdaQCD=_Z0->Mass()/std::pow(std::exp(1./(b0*AlphaS_mZ2)),0.5);
   if(nloop==1){
-    if(_nf==3){_lambdaQCD=0.2457484;}
-    if(_nf==4){_lambdaQCD=0.1530858;}
-    if(_nf==5){_lambdaQCD=0.0878275;}
+    if(_nf==3) {_lambdaQCD=0.2457484;}
+    if(_nf==4) {_lambdaQCD=0.1530858;}
+    if(_nf==5) {_lambdaQCD=0.0878275;}
   }
   //NLO with 2-loop β-function coefficient
   if(nloop==2){
-    if(_nf==3){_lambdaQCD=0.7376440;}
-    if(_nf==4){_lambdaQCD=0.4362115;}
-    if(_nf==5){_lambdaQCD=0.2262347;}
+    if(_nf==3) {_lambdaQCD=0.7376440;}
+    if(_nf==4) {_lambdaQCD=0.4362115;}
+    if(_nf==5) {_lambdaQCD=0.2262347;}
   }
 
   return _lambdaQCD;
@@ -94,7 +94,7 @@ double QCD::Pqg(const double z){
 
 double QCD::Pqg(const double z, const double x, const double Q){
   double res=0.0;
-  if(z>x && z<1.) res=Pqg(z)*pdf(21,x/z,Q)/z;
+  if(z>x && z<1.) res=Pqg(z)*PDFs(21,x/z,Q)/z;
   return res;
 }
 
@@ -108,7 +108,7 @@ double QCD::Pgq(const double z, const double x, const double Q){
   double res=0.0;
   if(z>x && z<1.){
     for(int i=1; i<=_nf; i++){
-      res+=pdf(i,x/z,Q);
+      res+=PDFs(i,x/z,Q);
     }
     res*=Pgq(z)/z;
   }
@@ -119,7 +119,7 @@ double QCD::Pgqb(const double z, const double x, const double Q){
   double res=0.0;
   if(z>x && z<1.){
     for(int i=1; i<=_nf; i++){
-      res+=pdf(-i,x/z,Q);
+      res+=PDFs(-i,x/z,Q);
     }
     res*=Pgq(z)/z;
   }
@@ -129,10 +129,10 @@ double QCD::Pgqb(const double z, const double x, const double Q){
 double QCD::Pqq(const int flavor, const double z, const double x, const double Q){
   double res=0.0;
   if(z>0. && z<1.){
-    double qsumx=pdf(flavor,x,Q);
+    double qsumx=PDFs(flavor,x,Q);
     res=1.5*qsumx;  //make sure the range for z integration is from 0 to 1
     double qsum=0.0;
-    if(z>x) qsum=pdf(flavor,x/z,Q);
+    if(z>x) qsum=PDFs(flavor,x/z,Q);
     res+=((1.+z*z)*qsum/z-2.*qsumx)/((1.-z));
     res*=_CF;
   }
@@ -142,12 +142,12 @@ double QCD::Pqq(const int flavor, const double z, const double x, const double Q
 double QCD::Pgg(const double z, const double x, const double Q){
   double res=0.0;
   if(z>0. && z<1.){
-    res=(11.*_Nc/6.-_nf/3.)*pdf(21,x,Q);  //make sure the range for z integration is from 0 to 1
+    res=(11.*_Nc/6.-_nf/3.)*PDFs(21,x,Q);  //make sure the range for z integration is from 0 to 1
     if(z>x){
-      res+=2.*_Nc*((z*z-z+1.)*(z*z-z+1.)*pdf(21,x/z,Q)/(z*z)-pdf(21,x,Q))/(1.-z);
+      res+=2.*_Nc*((z*z-z+1.)*(z*z-z+1.)*PDFs(21,x/z,Q)/(z*z)-PDFs(21,x,Q))/(1.-z);
     }
     else{
-      res+=-2.*_Nc*pdf(21,x,Q)/(1.-z);
+      res+=-2.*_Nc*PDFs(21,x,Q)/(1.-z);
     }
   }
   return res;

@@ -1,5 +1,5 @@
-#ifndef DIJETLO_H
-#define DIJETLO_H
+#ifndef INCLUSIVEJETLO_H
+#define INCLUSIVEJETLO_H
 
 #include <iostream>
 #include <iomanip>
@@ -13,22 +13,22 @@
 #include "DefineInput.cpp"
 
 
-class DiJetLO{
+class InclusiveJetLO{
 
  private:
 
-  Particle *_parton;
-  int    _nf;                             //flavors of quarks, 3 by default
-  double _preXsection;                    //prefactor for calculating cross secton
+  Particle *_parton;                      //particle class
+  int    _nf;                             //quarks flavors
+  double _unitGeV2pb;                     //GeV^2 pb from PDG 2024
+  double _preXsection;                    //prefactor for cross secton calculation
   double _Ecm;                            //_Ecm=sqrt{_s} in CoM frame
   double _s;                              //collisional energy square
   double _mP2;                            //parton mass square
-  double _unitGeV2pb;                     //GeV^2 pb from PDG 2024
   double _y3c,_y4d;                       //rapidity of final jet
   double _x1,_x2,_shat,_that,_uhat;       //kinematics for hard scattering
-  double _pdf1aplus[30],_pdf1aminus[30];  //PDF with momentum fraction x1
-  double _pdf2bplus[30],_pdf2bminus[30];  //PDF with momentum fraction x2
-  double _Dz3c[30],_Dz4d[30];             //JFF for different parton numbering scheme
+  double _pdf1aplus[30],_pdf1aminus[30];  //PDFs with momentum fraction x1
+  double _pdf2bplus[30],_pdf2bminus[30];  //PDFs with momentum fraction x2
+  double _Dz3c[30],_Dz4d[30];             //JFFs for different parton numbering scheme
 
   //Variables for Monte Carlo
   const gsl_rng_type *_Type;
@@ -45,21 +45,23 @@ class DiJetLO{
 
  protected:
 
-  QCD *_qcd;
-  double _lambdaQCD;    //Λ_QCD depends on quark flavour _nf
-  double _pT,_pTscale;  //initial jet momentum and scale to control the errer bar
+  QCD *_qcd;            //QCD class
+  double _lambdaQCD;    //Λ_QCD with quark flavors dependence
+  double _alphasPDF;    //AlphaS from PDF
+  double _pT,_pTscale;  //initial jet momentum and scale to control the error range
 
 
  public:
 
-  DiJetLO();
-  DiJetLO(const double Ecm, Particle *Parton);
-  virtual ~DiJetLO();
+  InclusiveJetLO();
+  InclusiveJetLO(const double Ecm, Particle *Parton);
+  virtual ~InclusiveJetLO();
 
   //pT and pT scale
-  inline void setpT(const double pT) {_pT=pT;}
-  inline void setpTScale(const double pTscale) {_pTscale=pTscale;}
-  //QCD
+  inline void   setpT(const double pT) {_pT=pT;}
+  inline double getpT() const {return _pT;}
+  inline void   setpTScale(const double pTscale) {_pTscale=pTscale;}
+  //QCD parameters
   void setNf(const int nf);
   void setLambdaQCD(const int nloop);
 
@@ -73,19 +75,18 @@ class DiJetLO{
   //Kinematic cuts
   inline bool KinematicsQcut() const {return _x1>0.0 && _x1<1.0 && _x2>0.0 && _x2<1.0;}  //return whether it is allowed kinematics
 
-  //PDF: Parton distribution function
+  //PDFs: parton distribution functions
   void   setPDF1();
   void   setPDF2();
   double getPDF1(const int i);
   double getPDF2(const int i);
-  //JFF: Jet fragmentation function
-  void   setJetFF3();
-  void   setJetFF4();
-  double getJetFF3(const int i);
-  double getJetFF4(const int i);
+  //JFFs: jet fragmentation functions
+  void   setJFF3();
+  void   setJFF4();
+  double getJFF3(const int i);
+  double getJFF4(const int i);
 
-  //The prefactor*M^2 gives DiJetLO cross section
-  double alphasPDF(const double pT);
+  //Prefactor for cross section calculation at leading order
   void   setXsection();
   inline double getXsection() const {return _preXsection;}
   //Amplitudes squared
@@ -98,7 +99,7 @@ class DiJetLO{
   inline double M2gq2gq(const double &s, const double &t, const double &u);      //gq->gq
   inline double M2gg2gg(const double &s, const double &t, const double &u);      //gg->gg
 
-  //Differential cross section at leading order
+  //Leading order cross section for different channels
   double SigmaLOqqp2qqp();
   double SigmaLOqq2qq();
   double SigmaLOqqb2qpqpb();
@@ -110,19 +111,19 @@ class DiJetLO{
   double SigmaLOgq2gq_G();
   double SigmaLOgg2gg();
   //Leading order kinematic parameters
-  void   setLOParameters(const double y3c, const double y4d);
+  void   setParametersLO(const double y3c, const double y4d);
   //Leading order cross section
-  double SigmaLO();
-  double SigmaLOQuark();
-  double SigmaLOGluon();
+  double getSigmaLO();
+  double getSigmaLOQuark();
+  double getSigmaLOGluon();
 
 
   //Monte Carlo
   void setCalls(const size_t calls);
   void setupMC(double (*func)(double *, size_t, void *), size_t dim, double *rangemin, double *rangemax, void *para);
   void calculateMC(double &res, double &err);
-  void cleanupMC();
+  void freeMC();
 
 };
 
-#endif  //DIJETLO_H
+#endif  //INCLUSIVEJETLO_H

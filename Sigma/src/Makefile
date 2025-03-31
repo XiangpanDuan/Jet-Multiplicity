@@ -24,7 +24,7 @@ QCD.o: QCD.cpp QCD.h
 InclusiveJetLO.o: InclusiveJetLO.cpp InclusiveJetLO.h
 	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c InclusiveJetLO.cpp
 
-#Calculate Leading-Order cross section
+#Calculate cross section at leading order
 CalculateLO.o: CalculateLO.cpp
 	$(CXX) $(CXXFLAGS) $(IPDF) $(IGSL) -c CalculateLO.cpp
 

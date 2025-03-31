@@ -11,7 +11,7 @@ Particle::Particle(const std::string name){
 }
 
 void Particle::setParticle(const std::string name){
-  //All the values are taken from PDG 2024
+  //All values are taken from PDG 2024
   if      (name=="parton")   {_id=-273;   _mass=0.0;       _charge=0.0;}
   else if (name=="d")        {_id=1;      _mass=0.0;       _charge=-1.0/3.0;}
   else if (name=="u")        {_id=2;      _mass=0.0;       _charge= 2.0/3.0;}

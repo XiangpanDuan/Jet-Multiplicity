@@ -9,7 +9,7 @@ class Particle{
  private:
 
   std::string _name;  //particle name
-  int    _id;         //particle id according to PDF particle codes
+  int    _id;         //particle id according to PDG particle codes
   double _mass;       //particle mass
   double _charge;     //electric charge in the unit of the elementary charge e
 

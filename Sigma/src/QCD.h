@@ -13,15 +13,15 @@ class QCD{
 
  private:
 
-  LHAPDF::PDF *_pdf;               //download LHAPDF from https://lhapdf.hepforge.org/install.html
-  Particle *_Z0;
-  int    _nf;                      //flavors of quarks, 3 by default
-  double _lambdaQCD;
-  double _TF;
-  double _Nc,_CA,_CF;              //number of colors
+  LHAPDF::PDF *_pdf;               //LHAPDF from https://lhapdf.hepforge.org/install.html
+  Particle *_Z0;                   //parton Z0 class
+  int    _nf;                      //quark flavors
+  double _lambdaQCD;               //Λ_QCD
+  double _TF;                      //color factor
+  double _Nc,_CA,_CF;              //color factor
   double _beta0,_beta1,_beta2;     //beta function coefficient
-  double _gcusp0,_gcusp1,_gcusp2;  //_gcusp=gamma^cusp
-  double _gHq0,_gHg0,_gHq1,_gHg1;  //non-cusp anomalous dims for the hard function
+  double _gcusp0,_gcusp1,_gcusp2;  //cusp anomalous dimensions (gcusp=gamma^cusp)
+  double _gHq0,_gHg0,_gHq1,_gHg1;  //non-cusp anomalous dimensions for the hard function
 
 
  public:
@@ -29,20 +29,20 @@ class QCD{
   QCD();
   QCD(const int nf);
   ~QCD();
-  void setQCDInitialCondition();
-  void setNf(const int nf);
-  void setQCDParameters();
+  void setInitialConditionQCD();
+  void setNfQCD(const int nf);
+  void setParametersQCD();
 
-  //Color factor
+  //Quark flavors and color factor
   inline int    Nf() const {return _nf;}
   inline double TF() const {return _TF;}
   inline double Nc() const {return _Nc;}
   inline double CA() const {return _CA;}
   inline double CF() const {return _CF;}
 
-  //PDF, alphas, and Λ_QCD
-  inline double pdf(const int f, const double x, const double Q) const {return _pdf->xfxQ(f,x,Q)/x;}  //PDF as a function of flavor with momentum fraction x and factorization scale Q
-  inline double alphas(const double Q) const {return _pdf->alphasQ(Q);}                               //strong coupling constant alphas as a function of Q
+  //PDFs, alphas, and Λ_QCD
+  inline double PDFs(const int f, const double x, const double Q) const {return _pdf->xfxQ(f,x,Q)/x;}  //PDFs with momentum fraction x and factorization scale Q
+  inline double AlphaS(const double Q) const {return _pdf->alphasQ(Q);}                                //strong coupling alphas as a function of Q
   double LambdaQCD(const int nloop);
 
   //Splitting function
