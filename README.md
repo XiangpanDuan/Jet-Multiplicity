@@ -1,4 +1,4 @@
 # Jet-Multiplicity
-- Multiplicity: Generates the mean multiplicity and probability distributions.
-- Pythia: Simulates and analyzes the jet multiplicity distribution.
-- Sigma: Calculates the differential cross section.
+- Multiplicity: Multiplicity probability and mean multiplicity data.
+- Pythia: Simulates and analyzes the multiplicity distribution.
+- Sigma: The differential cross section data.
